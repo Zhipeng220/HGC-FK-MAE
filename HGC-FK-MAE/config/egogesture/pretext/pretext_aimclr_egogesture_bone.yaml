@@ -1,0 +1,120 @@
+work_dir: ./work_dir/egogesture/aimclr_pretext_bone
+
+# Model
+model: net.aimclr.AimCLR
+model_args:
+  base_encoder: net.st_gcn.Model
+  pretrain: True
+  feature_dim: 128
+  queue_size: 4096
+  momentum: 0.95
+  Temperature: 0.15
+  mlp: True
+  in_channels: 3
+  hidden_channels: 64
+  hidden_dim: 256
+  num_class: 128
+  dropout: 0.5
+  graph_args:
+    layout: 'egogesture'
+    strategy: 'spatial'
+  edge_importance_weighting: True
+
+# Loss
+loss: nt_xent_loss
+loss_args:
+  temperature: 0.15
+
+# Optimizer
+optimizer: SGD
+base_lr: 0.001
+optimizer_args:
+  momentum: 0.9
+  nesterov: True
+weight_decay: 0.0001
+
+# Learning rate scheduler
+step: [100,150]
+lr_decay_rate: 0.1
+
+# Training settings
+phase: train
+num_epoch: 200
+start_epoch: 0
+save_interval: 10
+eval_interval: 10
+print_log: True
+save_log: True
+log_interval: 100
+save_result: False
+
+# Data augmentation
+aug_method: aimclr
+shear_amplitude: 0.3
+temperal_padding_ratio: 6
+stream: bone
+
+# Random seed
+seed: 1
+
+# Feeder
+feeder: feeder.feeder_egogesture.Feeder
+train_feeder: feeder.feeder_egogesture.Feeder
+test_feeder: feeder.feeder_egogesture.Feeder
+memory_feeder: feeder.feeder_egogesture.Feeder  # ✅ 用于 KNN monitor
+
+train_feeder_args:
+  data_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/train_data.npy
+  label_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/train_label.pkl
+  split: train
+  bone: True
+  window_size: 50
+  shear_amplitude: 0.3
+  temperal_padding_ratio: 6
+  random_rot: True
+  random_choose: False
+  random_move: False
+  random_shift: False
+  normalization: False
+  debug: False # ✅ 使用完整数据集
+  use_mmap: True
+
+test_feeder_args:
+  data_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/val_data.npy
+  label_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/val_label.pkl
+  split: test
+  bone: True
+  window_size: 50
+  normalization: False
+  debug: False  # ✅ 使用完整数据集
+  use_mmap: True
+
+# ✅ 添加：memory feeder 配置（用于 KNN monitor）
+memory_feeder_args:
+  data_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/train_data.npy
+  label_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/train_label.pkl
+  split: train
+  bone: True
+  window_size: 50
+  normalization: False
+  # 不使用数据增强（用于特征提取）
+  random_rot: False
+  random_choose: False
+  random_move: False
+  random_shift: False
+  debug: False  # ✅ 使用完整数据集
+  use_mmap: True
+
+# DataLoader settings
+batch_size: 32
+test_batch_size: 32
+num_worker: 0
+
+# Device
+device: [0]
+use_gpu: True
+
+# KNN monitor
+knn_monitor: True  # ✅ 启用 KNN monitor
+knn_k: 200
+knn_t: 0.1
