@@ -428,4 +428,5 @@ class Model(nn.Module):
         if drop:
             return features_before_drop, x_out
         else:
-            return x_out
+
+            return self.fc(x_out)
