@@ -1,5 +1,3 @@
-# HGC-MAE: Anatomically-Constrained Dynamic Hypergraph Masked Autoencoder
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Framework](https://img.shields.io/badge/PyTorch-1.12+-EE4C2C.svg)](https://pytorch.org/)
 [![Status](https://img.shields.io/badge/Status-Work_In_Progress-orange)](https://github.com/)
@@ -70,3 +68,26 @@ cd HGC-MAE
 
 # Install dependencies
 pip install -r requirements.txt
+````
+
+-----
+
+## 🚀 Usage
+
+The training process is divided into two stages: Self-Supervised Pre-training and Linear Evaluation.
+
+### Stage 1: Pre-training
+
+Train the encoder using the proposed pretext tasks (Masked Autoencoding + Contrastive Learning).
+
+```bash
+python main.py pretrain_aimclr --config config/egogesture/pretext/pretrain_aimclr_egogesture_joint.yaml
+```
+
+### Stage 2: Linear Evaluation
+
+Freeze the pre-trained encoder and train a linear classifier to evaluate the quality of the learned representations.
+
+```bash
+python main.py linear_evaluation --config config/egogesture/linear_eval/linear_eval_aimclr_egogesture_joint.yaml
+```
