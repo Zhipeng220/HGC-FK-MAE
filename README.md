@@ -56,7 +56,7 @@ Extensive experiments are being conducted on standard benchmarks including **NTU
 
 ---
 
-## 🛠️ Installation (Preliminary)
+## 🛠️ Installation
 
 ### Requirements
 - Python >= 3.8
