@@ -1,69 +1,90 @@
-# 1. 工作目录 (🔴 关键: 必须是全新的目录)
-work_dir: ./work_dir/egogesture/aimclr_linear_eval_joint
+work_dir: ./work_dir/egogesture/linear_eval_joint
 
-# 2. 权重加载 (指向您新的“关节点”最佳模型)
-weights: 'work_dir/egogesture/aimclr_pretext_joint/epoch070_acc32.54_model.pt'
-ignore_weights: [encoder_q.fc, encoder_k, queue]
+# Weights (指向您刚刚训练好的模型)
+weights: ./work_dir/egogesture/aimclr_pretext_joint/epoch200_model.pt
+# 忽略分类头和队列，因为我们要训练一个新的分类器
+ignore_weights: ['encoder_q.fc', 'encoder_k', 'queue', 'decoder']
 
-# 3. 训练数据加载器 (Feeder)
+# Model
+model: net.aimclr.AimCLR
+model_args:
+  # AimCLR Args
+  base_encoder: net.ctrgcn.Model
+  pretrain: False # 线性评估模式
+
+  # Encoder Args (必须与预训练保持一致)
+  in_channels: 3
+  num_point: 21
+  num_person: 2
+  adaptive: True
+  graph: 'graph.egogesture.Graph'
+  graph_args: {}
+  # HGC 参数
+  num_hyperedges: 16
+
+  # 分类头参数 (EgoGesture 有 83 类)
+  num_class: 83
+
+# Optimizer (线性评估通常使用较高的学习率，因为只训练FC层)
+optimizer: SGD
+base_lr: 0.01
+optimizer_args:
+  momentum: 0.9
+  nesterov: True
+weight_decay: 0.0001
+
+# Learning rate scheduler
+step: [50, 75]
+#lr_decay_rate: 0.1
+
+# Training settings
+phase: train
+num_epoch: 100
+start_epoch: 0
+save_interval: 10
+eval_interval: 5
+print_log: True
+save_log: True
+log_interval: 100
+save_result: False
+
+# Feeder (标准的训练/测试 Feeder)
+#feeder: feeder.feeder_egogesture.Feeder
 train_feeder: feeder.feeder_egogesture.Feeder
+test_feeder: feeder.feeder_egogesture.Feeder
+
 train_feeder_args:
   data_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/train_data.npy
   label_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/train_label.pkl
   split: train
-  bone: false       # 🔴 关键: 使用关节点
+  bone: False
   window_size: 50
-  random_rot: false
-  random_choose: false
-  random_move: false
-  random_shift: false
-  normalization: false
-  debug: false      # 先用 false，如果崩溃我们再调试
-  use_mmap: true
+  # 线性评估时通常使用较弱的数据增强或不增强
+  shear_amplitude: -1
+  temperal_padding_ratio: -1
+  random_rot: False
+  random_choose: False
+  random_move: False
+  random_shift: False
+  normalization: False
+  debug: False
+  use_mmap: True
 
-# 4. 测试数据加载器 (Feeder)
-test_feeder: feeder.feeder_egogesture.Feeder
 test_feeder_args:
   data_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/val_data.npy
   label_path: /Users/gzp/Desktop/exp/CTR-GCN-main/data/egogesture/val_label.pkl
   split: test
-  bone: false       # 🔴 关键: 使用关节点
+  bone: False
   window_size: 50
-  normalization: false
-  debug: false
-  use_mmap: true
+  normalization: False
+  debug: False
+  use_mmap: True
 
-# 5. 模型定义 (保持原始定义，linear_evaluation.py 是“智能”的)
-model: net.aimclr.AimCLR
-model_args:
-  base_encoder: net.st_gcn.Model
-  pretrain: false
-  in_channels: 3
-  hidden_channels: 64
-  hidden_dim: 256
-  num_class: 83
-  dropout: 0.5
-  graph_args:
-    layout: 'egogesture'
-    strategy: 'spatial'
-  edge_importance_weighting: true
-
-# 6. 优化器 (🔴 关键: 必须冻结骨干网络)
-optimizer: SGD
-optimizer_args:
-  fix_backbone: true   # 这一行确保了这只是“线性评估”
-base_lr: 0.01
-nesterov: true
-weight_decay: 0.0001
-step: [50]
-
-# 7. 运行设置
-device: [0]
+# DataLoader settings
 batch_size: 32
 test_batch_size: 32
-num_epoch: 80
-stream: 'joint'      # 🔴 关键: 保持 'joint'
+num_worker: 0
 
-save_interval: 5
-eval_interval: 5
-show_topk: [1, 5]
+# Device
+device: [0]
+use_gpu: True
