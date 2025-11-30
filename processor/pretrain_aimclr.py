@@ -171,17 +171,32 @@ class AimCLR_Processor(Processor):
         cl_criterion = nn.CrossEntropyLoss()
         kl_weight = self.arg.kl_weight
 
-        # 创新点 3: "强到弱" 物理先验调度
+        # ---------------------------------------------------------------------
+        # 创新点 3: "强到弱" 物理先验调度 (Strong-to-Weak Anatomical Scheduling)
+        # ---------------------------------------------------------------------
+        # 余弦退火：从 lambda_phy_max 衰减到 0
         lambda_anat = self.arg.lambda_phy_max * 0.5 * (1 + math.cos(math.pi * (epoch - 1) / self.arg.num_epoch))
+
+        # ---------------------------------------------------------------------
+        # [NEW] 创新点 5: 动态 Mask Ratio 调度 (Curriculum Masking)
+        # ---------------------------------------------------------------------
+        # 课程学习：随着训练进行，逐渐增加掩码难度
+        # 从 0.1 线性增长到 config 中的 mask_ratio (例如 0.7)
+        target_mask_ratio = self.arg.mask_ratio
+        progress = (epoch - 1) / self.arg.num_epoch
+        current_mask_ratio = 0.1 + (target_mask_ratio - 0.1) * progress
+        # 限制最大值，防止溢出
+        current_mask_ratio = min(current_mask_ratio, target_mask_ratio)
 
         if epoch == 1 and self.global_step == 0:
             self.io.print_log(f'Using KL weight (lambda_cl): {self.arg.lambda_cl}')
             self.io.print_log(f'Using MAE Reconstruction weight: {self.arg.lambda_rec}')
             self.io.print_log(f'Using MAE Alignment weight: {self.arg.lambda_align}')
-            self.io.print_log(f'Using Masking Strategy: {self.arg.mask_strategy} (Ratio: {self.arg.mask_ratio})')
+            self.io.print_log(f'Using Masking Strategy: {self.arg.mask_strategy} (Target Ratio: {target_mask_ratio})')
             self.io.print_log(f'Gradient Accumulation Steps: {self.arg.grad_accum_steps}')
 
         self.io.print_log(f'Epoch {epoch}: Physics Loss Weight (lambda_anat) = {lambda_anat:.4f}')
+        self.io.print_log(f'Epoch {epoch}: Current Mask Ratio (Curriculum) = {current_mask_ratio:.4f}')
 
         self.optimizer.zero_grad()  # 确保开始前梯度清零
 
@@ -218,9 +233,10 @@ class AimCLR_Processor(Processor):
             # -----------------------------------------------------------------
             # 2. MAE 路径 (HGC-MAE)
             # -----------------------------------------------------------------
+            # 使用动态的 current_mask_ratio
             mask, masked_indices, visible_indices = perform_masking(
                 x_original,
-                mask_ratio=self.arg.mask_ratio,
+                mask_ratio=current_mask_ratio,  # <--- [UPDATED] 使用动态课程掩码比率
                 strategy=self.arg.mask_strategy,
                 num_joints=V
             )
